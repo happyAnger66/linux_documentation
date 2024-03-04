@@ -2,47 +2,36 @@
 
 
 ## 1.概述 
-============
 
-CFS stands for "Completely Fair Scheduler," and is the new "desktop" process
-scheduler implemented by Ingo Molnar and merged in Linux 2.6.23.  It is the
-replacement for the previous vanilla scheduler's SCHED_OTHER interactivity
-code.
+CFS代表`完全公共调度器`,这是新的`桌面`进程调度器实现.
+
+由Ingo Molnar实现并merge到内核Linux2.6.23中.
+它代替了之前由`vanilla scheduler`实现的`SCHED_OTHER`交互式代码.
 
 CFS设计的80%可以总结为一句话:CFS在真实硬件上实现了一种“理想的、CPU上精确多任务"的基本模型.
 
-"Ideal multi-tasking CPU" is a (non-existent  :-)) CPU that has 100% physical
-power and which can run each task at precise equal speed, in parallel, each at
-1/nr_running speed.  For example: if there are 2 tasks running, then it runs
-each at 50% physical power --- i.e., actually in parallel.
+"理想的多任务CPU"是指一个CPU有100%的物理能力并行地以精确的速度运行每个任务,每个任务以1/nr_running的速度.比如,如果有2个任务处于运行状态,那么每个任务使用50%的物理能力---即，实际上是并行的.
 
-On real hardware, we can run only a single task at once, so we have to
-introduce the concept of "virtual runtime."  The virtual runtime of a task
-specifies when its next timeslice would start execution on the ideal
-multi-tasking CPU described above.  In practice, the virtual runtime of a task
-is its actual runtime normalized to the total number of running tasks.
+在真实的硬件上,在任意时刻,我们只能运行一个任务,所以我们需要引入`虚拟运行时间`的概念.
+一个任务的虚拟运行时间决定了该任务在上面提到的多任务CPU上下次开始执行的时间片.
+在实际中,任务的`虚拟运行时间`是它的实际运行时间与总共运行任务数计算后的结果.
 
 
+## 2. 一些实际细节
 
-2.  FEW IMPLEMENTATION DETAILS
-==============================
-
-In CFS the virtual runtime is expressed and tracked via the per-task
-p->se.vruntime (nanosec-unit) value.  This way, it's possible to accurately
-timestamp and measure the "expected CPU time" a task should have gotten.
-
-   Small detail: on "ideal" hardware, at any time all tasks would have the same
-   p->se.vruntime value --- i.e., tasks would execute simultaneously and no task
-   would ever get "out of balance" from the "ideal" share of CPU time.
+在CFS实现里,`虚拟运行时间`通过每个任务的`p->se.vruntime(单位ns)`来表示和跟踪.In CFS the virtual runtime is expressed and tracked via the per-task
+这样,才有可能准确的计算一个任务`期望获得的CPU time`.
+一些细节: 在`理想`的硬件上,所有任务都含有相同的
+`p->se.vruntime value`.这样,任务将会同时执行并且没有任务会从理想CPU的共享中失去平衡.
 
 CFS的任务挑选逻辑基于`p->se.vruntime`,并且相当简单:总是挑选`p->se.vruntime`值最小的任务(比如,当前执行时间最少的任务).
+
 CFS总是尝试将CPU时间在可运行的任务间分配的尽可能地接近"理想硬件上多任务运行"的情形.
 
 CFS设计的大部分剩余部分都脱离了这个简单的概念，添加了一些附加的调整，如nice值,多进程,和识别sleepers的算法.
 
 
-
-3.  THE RBTREE
+3.  RBTREE
 ==============
 
 CFS的设计相当激进：它没有使用老的`runqueues`数据结构,而是使用了基于时间排序的`rbtree`来构建要执行任务的时间线.
@@ -78,8 +67,7 @@ picked and the current task is preempted.
 
 
 
-4.  SOME FEATURES OF CFS
-========================
+## 4. CFS的一些特性
 
 CFS使用ns粒度进行计算分配,而不再依赖jiffies或者其它HZ相关的东西.
 这样CFS调度器没有了之前调度器`时间片`的概念,并且没有任何启发式的算法.
@@ -104,8 +92,7 @@ result.
 
 
 
-5. Scheduling policies
-======================
+## 5. 调度策略
 
 CFS implements three scheduling policies:
 
@@ -129,8 +116,7 @@ SCHED_IDLE.
 
 
 
-6.  SCHEDULING CLASSES
-======================
+## 6. 调度类
 
 The new CFS scheduler has been designed in such a way to introduce "Scheduling
 Classes," an extensible hierarchy of scheduler modules.  These modules
@@ -190,8 +176,7 @@ This is the (partial) list of the hooks:
 
 
 
-7.  GROUP SCHEDULER EXTENSIONS TO CFS
-=====================================
+## 7.  分组调度扩展到CFS
 
 Normally, the scheduler operates on individual tasks and strives to provide
 fair CPU time to each task.  Sometimes, it may be desirable to group tasks and
